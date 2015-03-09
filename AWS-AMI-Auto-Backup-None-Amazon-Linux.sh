@@ -27,22 +27,22 @@ if [ $routine = true ]; then
     amiName=$amiNamePrefix$weekday
 
     # Get AMI ID
-    amiIDs=$(aws ec2 describe-images --owners $ownerID --output text --query 'Images[*].ImageId')
+    amiIDs=$(aws ec2 describe-images --owners $ownerID --output text | grep "$amiName" | cut -f 6)
 
     # Get Snapshot ID
     if [[ ! -z $amiIDs ]]; then
-        snapshotIDs=$(aws ec2 describe-snapshots --owner-ids $ownerID --output text --query 'Snapshots[*].SnapshotId')
+        snapshotIDs=$(aws ec2 describe-snapshots --owner-ids $ownerID --output text | grep $amiIDs | cut -f 6)
     fi
 else
     # Setup AMI Name
     amiName=$amiNamePrefix
 
     # Get AMI ID
-    amiIDs=$(aws ec2 describe-images --owners $ownerID --output text --query 'Images[*].ImageId')
+    amiIDs=$(aws ec2 describe-images --owners $ownerID --output text | grep 'ami-[a-z0-9]' | cut -f 6)
 
     # Get Snapshot ID
     if [[ ! -z $amiIDs ]]; then
-        snapshotIDs=$(aws ec2 describe-snapshots --owner-ids $ownerID --output text --query 'Snapshots[*].SnapshotId')
+        snapshotIDs=$(aws ec2 describe-snapshots --owner-ids $ownerID --output text | grep $amiIDs | cut -f 6)
     fi
 fi
 
