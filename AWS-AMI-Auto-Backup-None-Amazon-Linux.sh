@@ -1,9 +1,6 @@
 #!/bin/bash
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
 
-# Regions reference: http://docs.aws.amazon.com/general/latest/gr/rande.html
-#region="us-west-1b"
-
 # You can find your instance ID at AWS Manage Console
 instanceID="YOUR-INSTANCE-ID"
 
@@ -16,36 +13,20 @@ amiNamePrefix="AMI_"
 # Your prefer AMI Description
 amiDescription="Daily AMI backup"
 
-# If you want to keep 7 days AMI backups, please set routine true otherwise set it false
-routine=true
-
-# Variable for routine is true
+# Sun, Mon, Tue...
 weekday=$(date +%a)
 
-if [ $routine = true ]; then
-    # Setup AMI Name
-    amiName=$amiNamePrefix$weekday
+# Setup AMI Name
+amiName=$amiNamePrefix$weekday
 
-    # Get AMI ID
-    amiIDs=$(aws ec2 describe-images --owners $ownerID --output text | grep "$amiName" | cut -f 6)
+# Get AMI Image and Snapshot ID
+amiInfo=$(aws ec2 describe-images --owners $ownerID --output text --query "Images[*].[ImageId,BlockDeviceMappings[*].Ebs[].SnapshotId]" --filters "Name=name, Values=$amiName" | xargs -r)
+set -- "$amiInfo"
+IFS=" "; declare -a Array=($*)
+amiIDs="${Array[0]}"
+snapshotIDs="${Array[1]}"
 
-    # Get Snapshot ID
-    if [[ ! -z $amiIDs ]]; then
-        snapshotIDs=$(aws ec2 describe-snapshots --owner-ids $ownerID --output text | grep $amiIDs | cut -f 6)
-    fi
-else
-    # Setup AMI Name
-    amiName=$amiNamePrefix
-
-    # Get AMI ID
-    amiIDs=$(aws ec2 describe-images --owners $ownerID --output text | grep 'ami-[a-z0-9]' | cut -f 6)
-
-    # Get Snapshot ID
-    if [[ ! -z $amiIDs ]]; then
-        snapshotIDs=$(aws ec2 describe-snapshots --owner-ids $ownerID --output text | grep $amiIDs | cut -f 6)
-    fi
-fi
-
+# Delete old image and snapshot
 if [[ ! -z $amiIDs ]]; then
     # Deregister AMI
     for amiID in $amiIDs
